@@ -8,12 +8,18 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv" // ✅ carga .env automáticamente
 )
 
 // usage:
 // go run ./cmd/migrate up
 // go run ./cmd/migrate down 1
 func main() {
+	// ✅ Cargar variables desde el archivo .env (si existe)
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️  No .env file found, using system environment")
+	}
+
 	if len(os.Args) < 2 {
 		log.Fatalf("Usage: migrate [up|down|version|force]")
 	}
@@ -21,7 +27,7 @@ func main() {
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		log.Fatal("DATABASE_URL not set")
+		log.Fatal("❌ DATABASE_URL not set")
 	}
 
 	m, err := migrate.New(
@@ -29,16 +35,16 @@ func main() {
 		dbURL,
 	)
 	if err != nil {
-		log.Fatalf("create migrate instance: %v", err)
+		log.Fatalf("❌ create migrate instance: %v", err)
 	}
 	defer m.Close()
 
 	switch action {
 	case "up":
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("migration up failed: %v", err)
+			log.Fatalf("❌ migration up failed: %v", err)
 		}
-		fmt.Println("✅ migrations applied successfully")
+		fmt.Println("✅ Migrations applied successfully")
 
 	case "down":
 		steps := 1
@@ -46,14 +52,14 @@ func main() {
 			fmt.Sscanf(os.Args[2], "%d", &steps)
 		}
 		if err := m.Steps(-steps); err != nil {
-			log.Fatalf("migration down failed: %v", err)
+			log.Fatalf("❌ migration down failed: %v", err)
 		}
-		fmt.Println("✅ rolled back", steps, "steps")
+		fmt.Println("✅ Rolled back", steps, "steps")
 
 	case "version":
 		v, dirty, err := m.Version()
 		if err != nil && err != migrate.ErrNilVersion {
-			log.Fatalf("get version failed: %v", err)
+			log.Fatalf("❌ get version failed: %v", err)
 		}
 		fmt.Printf("📦 version=%d dirty=%v\n", v, dirty)
 
@@ -64,11 +70,11 @@ func main() {
 		var v int
 		fmt.Sscanf(os.Args[2], "%d", &v)
 		if err := m.Force(v); err != nil {
-			log.Fatalf("force failed: %v", err)
+			log.Fatalf("❌ force failed: %v", err)
 		}
-		fmt.Println("✅ forced version to", v)
+		fmt.Println("✅ Forced version to", v)
 
 	default:
-		log.Fatalf("Unknown action: %s", action)
+		log.Fatalf("❌ Unknown action: %s", action)
 	}
 }
