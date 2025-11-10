@@ -6,13 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
+	"github.com/arturo/autohost-cloud-api/internal/auth"
 	"github.com/arturo/autohost-cloud-api/internal/platform"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -31,7 +31,7 @@ func (h *AuthHandler) Routes() chi.Router {
 	r.Post("/refresh", h.Refresh)
 	r.Post("/logout", h.Logout)
 	r.Group(func(pr chi.Router) {
-		pr.Use(h.AuthMiddleware)
+		pr.Use(auth.AuthMiddleware)
 		pr.Get("/me", h.Me)
 	})
 	return r
@@ -44,7 +44,6 @@ type creds struct {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Register called")
 	var in creds
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
@@ -197,31 +196,31 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ---
 
-func (h *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ah := r.Header.Get("Authorization")
-		if len(ah) < 8 || ah[:7] != "Bearer " {
-			http.Error(w, "unauthorized", 401)
-			return
-		}
-		claims, err := platform.ParseAccessToken(ah[7:])
-		if err != nil {
-			http.Error(w, "unauthorized", 401)
-			return
-		}
-		ctx := r.Context()
-		ctx = withClaims(ctx, claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
+// func (h *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
+// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		ah := r.Header.Get("Authorization")
+// 		if len(ah) < 8 || ah[:7] != "Bearer " {
+// 			http.Error(w, "unauthorized", 401)
+// 			return
+// 		}
+// 		claims, err := platform.ParseAccessToken(ah[7:])
+// 		if err != nil {
+// 			http.Error(w, "unauthorized", 401)
+// 			return
+// 		}
+// 		ctx := r.Context()
+// 		ctx = withClaims(ctx, claims)
+// 		next.ServeHTTP(w, r.WithContext(ctx))
+// 	})
+// }
 
 type ctxKey string
 
 var claimsKey ctxKey = "claims"
 
-func withClaims(ctx context.Context, c *platform.JWTClaims) context.Context {
-	return context.WithValue(ctx, claimsKey, c)
-}
+// func withClaims(ctx context.Context, c *platform.JWTClaims) context.Context {
+// 	return context.WithValue(ctx, claimsKey, c)
+// }
 
 func getClaims(ctx context.Context) *platform.JWTClaims {
 	if v, ok := ctx.Value(claimsKey).(*platform.JWTClaims); ok {
