@@ -1,17 +1,18 @@
 // internal/adapters/http/auth_handlers.go
-package httpadp
+package http
 
 import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/arturo/autohost-cloud-api/internal/adapters/repo"
+	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
 	"github.com/arturo/autohost-cloud-api/internal/platform"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -43,6 +44,7 @@ type creds struct {
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Register called")
 	var in creds
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
@@ -82,24 +84,65 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var in creds
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		http.Error(w, "bad json", 400)
+		http.Error(w, "bad json", http.StatusBadRequest)
 		return
 	}
+
 	u, err := h.R.FindUserByEmail(r.Context(), in.Email)
 	if err != nil || u == nil {
-		http.Error(w, "invalid credentials", 401)
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 	if err := platform.CheckPassword(u.PasswordHash, in.Password); err != nil {
-		http.Error(w, "invalid credentials", 401)
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
+	// 1) Genera tokens
 	access, _ := platform.SignAccessToken(u.ID, u.Email)
 	rt, rtHash := makeRefreshPair()
 	_ = h.R.StoreRefresh(r.Context(), u.ID, rtHash, r.UserAgent(), clientIP(r))
+
+	// 2) Setea cookies (¡incluye access_token!)
+	setAccessCookie(w, access)
 	setRefreshCookie(w, rt)
-	json.NewEncoder(w).Encode(map[string]any{"access_token": access})
+
+	// 3) Respuesta JSON (opcional: puedes omitir access_token en body si ya vas vía cookie)
+	_ = json.NewEncoder(w).Encode(map[string]any{"access_token": access})
 }
+
+// ----------------- helpers de cookies -----------------
+
+func isProd() bool {
+
+	e := "prod"
+	return e == "prod" || e == "production"
+}
+
+func setAccessCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    token,
+		Path:     "/",                  // disponible en todo el sitio
+		HttpOnly: true,                 // no accesible por JS
+		SameSite: http.SameSiteLaxMode, // suficiente para same-site (localhost)
+		Secure:   isProd(),             // en dev (HTTP) debe ser false
+		MaxAge:   15 * 60,              // 15 minutos
+	})
+}
+
+// func setRefreshCookie(w http.ResponseWriter, rt string) {
+// 	// IMPORTANTE: en dev no uses Secure, y amplia el Path para que el navegador la conserve
+// 	http.SetCookie(w, &http.Cookie{
+// 		Name:     "refresh_token",
+// 		Value:    rt,
+// 		Path:     "/",                       // no lo limites a /v1/auth
+// 		HttpOnly: true,
+// 		SameSite: http.SameSiteLaxMode,
+// 		Secure:   isProd(),
+// 		MaxAge:   30 * 24 * 60 * 60,         // 30 días
+// 	})
+// }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
@@ -192,10 +235,10 @@ func makeRefreshPair() (plain string, hash string) {
 	return plain, hashRT(plain)
 }
 
-func parseRefresh(plain string) (userID int64, email string, err error) {
+func parseRefresh(plain string) (userID string, email string, err error) {
 	// En este MVP el refresh no lleva datos, solo verificamos existencia y rotación en DB por hash.
 	// Si quieres que lleve UID/email/exp, usa JWT también para refresh.
-	return 0, "", nil
+	return "", "", nil
 }
 
 func hashRT(s string) string {

@@ -9,12 +9,12 @@ import (
 )
 
 type JWTClaims struct {
-	UserID int64  `json:"uid"`
+	UserID string `json:"uid"`
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-func SignAccessToken(userID int64, email string) (string, error) {
+func SignAccessToken(userID string, email string) (string, error) {
 	ttl := 15 * time.Minute
 	if v := os.Getenv("ACCESS_TOKEN_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {

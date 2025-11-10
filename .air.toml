@@ -1,0 +1,17 @@
+# .air.toml (en la raíz del repo)
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# crea el directorio y compila tu servicio
+pre_cmd = ["mkdir -p ./tmp"]
+cmd = "go build -o ./tmp/api ./cmd/api"
+# binario a ejecutar al terminar de compilar
+bin = "tmp/api"
+
+# archivos/directorios que observar
+include_ext = ["go", "tpl", "tmpl", "html"]
+include_dir = ["cmd", "internal", "infra", "migrations"]
+exclude_dir = ["tmp", "vendor", ".git"]
+delay = 200        # ms de debounce
+kill_delay = 500   # ms para matar proceso anterior
