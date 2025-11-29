@@ -1,4 +1,4 @@
-package http
+package node
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
+	nodepg "github.com/arturo/autohost-cloud-api/infrastructure/persistence/node-pg"
 	"github.com/arturo/autohost-cloud-api/internal/auth"
 	"github.com/arturo/autohost-cloud-api/internal/domain"
 	"github.com/go-chi/chi/v5"
@@ -15,7 +15,7 @@ import (
 )
 
 type NodeHandler struct {
-	R  *repo.NodeRepo
+	R  *nodepg.NodeRepo
 	DB *sqlx.DB
 }
 
@@ -33,7 +33,7 @@ func (h *NodeHandler) RegisterNodeLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var nodeRequest domain.CreateNode
+	var nodeRequest domain.Node
 	if err := json.NewDecoder(r.Body).Decode(&nodeRequest); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
 		return
@@ -58,20 +58,8 @@ func (h *NodeHandler) RegisterNodeLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// (Opcional): valida que el usuario exista si tienes user repo
-	// u, err := h.Users.FindByID(r.Context(), claims.UserID)
-	// if err != nil || u == nil { http.Error(w, "user not found", http.StatusNotFound); return }
-
-	// (Opcional) idempotencia: si ya existe (owner_id+hostname) devuelve ese
-	// if existing, err := h.R.FindByOwnerAndHostname(r.Context(), claims.UserID, nodeRequest.HostName); err == nil && existing != nil {
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	w.WriteHeader(http.StatusOK)
-	// 	_ = json.NewEncoder(w).Encode(existing)
-	// 	return
-	// }
-
 	// Crear nodo
-	newNode, err := h.R.CreateNode(r.Context(), &nodeRequest)
+	err := h.R.CreateNode(r.Context(), &nodeRequest)
 	if err != nil {
 		log.Printf("[ERROR] create node: %v", err)
 		http.Error(w, "could not create node", http.StatusInternalServerError)
@@ -82,5 +70,5 @@ func (h *NodeHandler) RegisterNodeLink(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(newNode)
+	// _ = json.NewEncoder(w).Encode(newNode)
 }

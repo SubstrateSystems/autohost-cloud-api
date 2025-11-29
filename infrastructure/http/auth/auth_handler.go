@@ -1,5 +1,5 @@
 // internal/adapters/http/auth_handlers.go
-package http
+package auth
 
 import (
 	"context"
@@ -130,19 +130,6 @@ func setAccessCookie(w http.ResponseWriter, token string) {
 	})
 }
 
-// func setRefreshCookie(w http.ResponseWriter, rt string) {
-// 	// IMPORTANTE: en dev no uses Secure, y amplia el Path para que el navegador la conserve
-// 	http.SetCookie(w, &http.Cookie{
-// 		Name:     "refresh_token",
-// 		Value:    rt,
-// 		Path:     "/",                       // no lo limites a /v1/auth
-// 		HttpOnly: true,
-// 		SameSite: http.SameSiteLaxMode,
-// 		Secure:   isProd(),
-// 		MaxAge:   30 * 24 * 60 * 60,         // 30 días
-// 	})
-// }
-
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("refresh_token")
 	if err != nil || c.Value == "" {
@@ -193,26 +180,6 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		"email":   claims.Email,
 	})
 }
-
-// --- helpers ---
-
-// func (h *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		ah := r.Header.Get("Authorization")
-// 		if len(ah) < 8 || ah[:7] != "Bearer " {
-// 			http.Error(w, "unauthorized", 401)
-// 			return
-// 		}
-// 		claims, err := platform.ParseAccessToken(ah[7:])
-// 		if err != nil {
-// 			http.Error(w, "unauthorized", 401)
-// 			return
-// 		}
-// 		ctx := r.Context()
-// 		ctx = withClaims(ctx, claims)
-// 		next.ServeHTTP(w, r.WithContext(ctx))
-// 	})
-// }
 
 type ctxKey string
 

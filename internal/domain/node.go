@@ -1,10 +1,21 @@
 package domain
 
-type CreateNode struct {
-	HostName     string  `json:"hostname"`
-	IPLocal      string  `json:"ip_local"`
-	OS           string  `json:"os"`
-	Arch         string  `json:"arch"`
-	VersionAgent string  `json:"version_agent"`
-	OwnerID      *string `json:"owner_id"`
+type Node struct {
+	HostName     string
+	IPLocal      string
+	OS           string
+	Arch         string
+	VersionAgent string
+	OwnerID      *string
+}
+
+func NewNode(hostname, ipLocal, os, arch, versionAgent string, ownerID *string) *Node {
+	return &Node{
+		HostName:     hostname,
+		IPLocal:      ipLocal,
+		OS:           os,
+		Arch:         arch,
+		VersionAgent: versionAgent,
+		OwnerID:      ownerID,
+	}
 }

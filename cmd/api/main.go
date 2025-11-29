@@ -5,10 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
-	httpadp "github.com/arturo/autohost-cloud-api/internal/adapters/http"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/chi/v5"
+	httpInfra "github.com/arturo/autohost-cloud-api/infrastructure/http"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -27,16 +24,9 @@ func main() {
 	db := sqlx.MustConnect("postgres", dbURL)
 	defer db.Close()
 
-	authRepo := repo.NewAuthRepo(db)
-	auth := httpadp.AuthHandler{R: authRepo, DB: db}
-	nodeRepo := repo.NewNodeRepo(db)
-	node := httpadp.NodeHandler{R: nodeRepo, DB: db}
-	r := chi.NewRouter()
-	r.Use(middleware.Logger) // 👈 esto imprime cada request
-	r.Use(cors)
-	r.Route("/v1/auth", func(r chi.Router) { r.Mount("/", auth.Routes()) })
-	r.Route("/v1/nodes", func(r chi.Router) {
-		r.Mount("/", node.Routes())
+	// Configurar el router con todas las dependencias
+	router := httpInfra.NewRouter(&httpInfra.RouterConfig{
+		DB: db,
 	})
 
 	port := os.Getenv("PORT")
@@ -45,7 +35,7 @@ func main() {
 	}
 
 	log.Printf("🚀 API running on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
 
 func cors(next http.Handler) http.Handler {
