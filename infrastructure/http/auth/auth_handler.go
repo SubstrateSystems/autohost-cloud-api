@@ -106,8 +106,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	setAccessCookie(w, access)
 	setRefreshCookie(w, rt)
 
-	// 3) Respuesta JSON (opcional: puedes omitir access_token en body si ya vas vía cookie)
-	_ = json.NewEncoder(w).Encode(map[string]any{"access_token": access})
+	// // 3) Respuesta JSON (opcional: puedes omitir access_token en body si ya vas vía cookie)
+	// _ = json.NewEncoder(w).Encode(map[string]any{"access_token": access})
+
 }
 
 // ----------------- helpers de cookies -----------------

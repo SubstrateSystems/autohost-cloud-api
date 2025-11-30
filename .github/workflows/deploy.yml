@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25" # o la que realmente uses
+          go-version: "1.22" # ojo: 1.25 aún no existe, pon la que uses en local
 
       # - name: Run tests
       #   run: go test ./...
@@ -24,14 +24,17 @@ jobs:
       - name: Build Linux binary
         run: |
           mkdir -p dist
-          # Si tu EC2 es x86:
           GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/autohost-api ./cmd/api
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/autohost-migrate ./cmd/migrate
          
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: autohost-api-binary
-          path: dist/autohost-api
+          name: autohost-api-binaries
+          path: |
+            dist/autohost-api
+            dist/autohost-migrate
+            migrations
 
   deploy:
     runs-on: ubuntu-latest
@@ -41,7 +44,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: autohost-api-binary
+          name: autohost-api-binaries
           path: dist
 
       - name: Copy binary to EC2
@@ -50,16 +53,21 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/autohost-api"
-          target: "/tmp"        # 👈 OJO: ahora solo /tmp
+          source: | 
+            "dist/autohost-api"
+            "dist/autohost-migrate"
+            "dist/migrations"
+          target: "/tmp"        
 
       - name: SSH & deploy
         uses: appleboy/ssh-action@v0.1.10
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: GITHUB_SHA
+          envs: GITHUB_SHA,DATABASE_URL
           script: |
             set -e
 
@@ -68,16 +76,27 @@ jobs:
 
             sudo mkdir -p "$RELEASE_DIR"
 
-            # 👇 El scp deja el archivo como /tmp/dist/autohost-api
+            # Mover binarios y migrations desde /tmp/dist
             sudo mv "/tmp/dist/autohost-api" "$RELEASE_DIR/autohost-api"
+            sudo mv "/tmp/dist/autohost-migrate" "$RELEASE_DIR/autohost-migrate"
+
+            sudo mkdir -p "$RELEASE_DIR/migrations"
+            sudo mv /tmp/dist/migrations/* "$RELEASE_DIR/migrations/"
+
+            # Ya no necesitamos /tmp/dist
             sudo rm -rf /tmp/dist
 
             sudo chmod +x "$RELEASE_DIR/autohost-api"
+            sudo chmod +x "$RELEASE_DIR/autohost-migrate"
             sudo chown -R autohost:autohost "$RELEASE_DIR"
 
             sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
             sudo chown -h autohost:autohost /opt/autohost-api/current
 
+            # 🔐 Correr migraciones como usuario autohost con DATABASE_URL del secret
+            cd "$RELEASE_DIR"
+            sudo -u autohost DATABASE_URL="$DATABASE_URL" ./autohost-migrate up
+
+            # reiniciar API
             sudo systemctl restart autohost-api
             sudo systemctl status autohost-api --no-pager -l || true
-

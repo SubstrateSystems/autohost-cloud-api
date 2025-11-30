@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/arturo/autohost-cloud-api/infrastructure/http/auth"
 	"github.com/arturo/autohost-cloud-api/infrastructure/http/node"
@@ -76,8 +77,9 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 // corsMiddleware configura CORS para la API
 func corsMiddleware(next http.Handler) http.Handler {
+	frontendURL := os.Getenv("FRONTEND_URL")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", frontendURL)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
