@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22" # ojo: 1.25 aún no existe, pon la que uses en local
+          go-version: "1.25"
 
       # - name: Run tests
       #   run: go test ./...
@@ -45,7 +45,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: autohost-api-binaries
-          path: dist
+          path: .
 
       - name: Copy binary to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -54,9 +54,9 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: | 
-            "dist/autohost-api"
-            "dist/autohost-migrate"
-            "dist/migrations"
+            dist/autohost-api
+            dist/autohost-migrate
+            dist/migrations
           target: "/tmp"        
 
       - name: SSH & deploy
