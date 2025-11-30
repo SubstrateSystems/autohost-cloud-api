@@ -51,7 +51,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "dist/autohost-api"
-          target: "/tmp/autohost-api"
+          target: "/tmp"        # 👈 OJO: ahora solo /tmp
 
       - name: SSH & deploy
         uses: appleboy/ssh-action@v0.1.10
@@ -67,7 +67,11 @@ jobs:
             RELEASE_DIR="/opt/autohost-api/releases/autohost-api-${SHA_SHORT}"
 
             sudo mkdir -p "$RELEASE_DIR"
-            sudo mv "/tmp/autohost-api" "$RELEASE_DIR/autohost-api"
+
+            # 👇 El scp deja el archivo como /tmp/dist/autohost-api
+            sudo mv "/tmp/dist/autohost-api" "$RELEASE_DIR/autohost-api"
+            sudo rm -rf /tmp/dist
+
             sudo chmod +x "$RELEASE_DIR/autohost-api"
             sudo chown -R autohost:autohost "$RELEASE_DIR"
 
@@ -76,3 +80,4 @@ jobs:
 
             sudo systemctl restart autohost-api
             sudo systemctl status autohost-api --no-pager -l || true
+
