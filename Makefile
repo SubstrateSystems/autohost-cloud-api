@@ -10,6 +10,8 @@ test:
 docker:
 	docker build -t autohost-cloud-lite .
 
+run-air:
+	air -c .air.toml
 
 
 migrate-up:
