@@ -8,14 +8,13 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/joho/godotenv" // ✅ carga .env automáticamente
+	"github.com/joho/godotenv"
 )
 
 // usage:
 // go run ./cmd/migrate up
 // go run ./cmd/migrate down 1
 func main() {
-	// ✅ Cargar variables desde el archivo .env (si existe)
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  No .env file found, using system environment")
 	}
