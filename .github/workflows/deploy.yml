@@ -16,25 +16,26 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.25" 
 
       # - name: Run tests
       #   run: go test ./...
 
-      - name: Build Linux binary
+      - name: Build Linux binaries
         run: |
           mkdir -p dist
           GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/autohost-api ./cmd/api
           GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/autohost-migrate ./cmd/migrate
-         
+
+          # 👇 Copiamos las migraciones dentro de dist
+          cp -r migrations dist/migrations
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: autohost-api-binaries
-          path: |
-            dist/autohost-api
-            dist/autohost-migrate
-            migrations
+          path: dist
+          # Esto sube TODO lo que haya dentro de dist/
 
   deploy:
     runs-on: ubuntu-latest
@@ -45,19 +46,22 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: autohost-api-binaries
-          path: .
+          path: .   
 
-      - name: Copy binary to EC2
+      - name: Debug - list files
+        run: |
+          echo "Contenido del workspace:"
+          pwd
+          ls -R
+
+      - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: | 
-            dist/autohost-api
-            dist/autohost-migrate
-            dist/migrations
-          target: "/tmp"        
+          source: "dist/**"       # 👈 TODO lo que está en dist/
+          target: "/tmp/autohost" # 👈 carpeta temporal en el server
 
       - name: SSH & deploy
         uses: appleboy/ssh-action@v0.1.10
@@ -76,15 +80,15 @@ jobs:
 
             sudo mkdir -p "$RELEASE_DIR"
 
-            # Mover binarios y migrations desde /tmp/dist
-            sudo mv "/tmp/dist/autohost-api" "$RELEASE_DIR/autohost-api"
-            sudo mv "/tmp/dist/autohost-migrate" "$RELEASE_DIR/autohost-migrate"
+            # Lo que mandamos por scp queda como /tmp/autohost/dist/...
+            sudo mv /tmp/autohost/dist/autohost-api "$RELEASE_DIR/autohost-api"
+            sudo mv /tmp/autohost/dist/autohost-migrate "$RELEASE_DIR/autohost-migrate"
 
             sudo mkdir -p "$RELEASE_DIR/migrations"
-            sudo mv /tmp/dist/migrations/* "$RELEASE_DIR/migrations/"
+            sudo mv /tmp/autohost/dist/migrations/* "$RELEASE_DIR/migrations/"
 
-            # Ya no necesitamos /tmp/dist
-            sudo rm -rf /tmp/dist
+            # Limpiamos tmp
+            sudo rm -rf /tmp/autohost
 
             sudo chmod +x "$RELEASE_DIR/autohost-api"
             sudo chmod +x "$RELEASE_DIR/autohost-migrate"
@@ -93,10 +97,10 @@ jobs:
             sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
             sudo chown -h autohost:autohost /opt/autohost-api/current
 
-            # 🔐 Correr migraciones como usuario autohost con DATABASE_URL del secret
+            # 🧩 Correr migraciones con DATABASE_URL del secret
             cd "$RELEASE_DIR"
             sudo -u autohost DATABASE_URL="$DATABASE_URL" ./autohost-migrate up
 
-            # reiniciar API
+            # 🚀 Reiniciar API
             sudo systemctl restart autohost-api
             sudo systemctl status autohost-api --no-pager -l || true
