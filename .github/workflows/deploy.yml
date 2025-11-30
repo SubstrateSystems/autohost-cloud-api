@@ -1,0 +1,85 @@
+name: Deploy AutoHost API
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25" # o la que realmente uses
+
+      # - name: Run tests
+      #   run: go test ./...
+
+      - name: Build Linux binary
+        run: |
+          mkdir -p dist
+          # Si tu EC2 es x86:
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o dist/autohost-api ./cmd/api
+         
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autohost-api-binary
+          path: dist/autohost-api
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: autohost-api-binary
+          path: dist
+
+      - name: Copy binary to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "dist/autohost-api"
+          target: "/tmp/autohost-api"
+
+      - name: SSH & deploy
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          # Pasamos GITHUB_SHA como env al server
+          envs: GITHUB_SHA
+          script: |
+            set -e
+
+            # Tomar los primeros 7 caracteres del SHA para el nombre del release
+            SHA_SHORT=$(echo "$GITHUB_SHA" | cut -c1-7)
+            RELEASE_DIR="/opt/autohost-api/releases/autohost-api-${SHA_SHORT}"
+
+            sudo mkdir -p "$RELEASE_DIR"
+            sudo mv "/tmp/autohost-api" "$RELEASE_DIR/autohost-api"
+            sudo chmod +x "$RELEASE_DIR/autohost-api"
+            sudo chown -R autohost:autohost "$RELEASE_DIR"
+
+            # actualizar symlink current
+            sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
+            sudo chown -h autohost:autohost /opt/autohost-api/current
+
+            # aquí podrías correr migraciones tipo:
+            # sudo -u autohost /opt/autohost-api/current/autohost-api migrate up
+
+            # reiniciar servicio
+            sudo systemctl restart autohost-api
+            sudo systemctl status autohost-api --no-pager -l || true
