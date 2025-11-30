@@ -59,12 +59,10 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          # Pasamos GITHUB_SHA como env al server
           envs: GITHUB_SHA
           script: |
             set -e
 
-            # Tomar los primeros 7 caracteres del SHA para el nombre del release
             SHA_SHORT=$(echo "$GITHUB_SHA" | cut -c1-7)
             RELEASE_DIR="/opt/autohost-api/releases/autohost-api-${SHA_SHORT}"
 
@@ -73,13 +71,8 @@ jobs:
             sudo chmod +x "$RELEASE_DIR/autohost-api"
             sudo chown -R autohost:autohost "$RELEASE_DIR"
 
-            # actualizar symlink current
             sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
             sudo chown -h autohost:autohost /opt/autohost-api/current
 
-            # aquí podrías correr migraciones tipo:
-            # sudo -u autohost /opt/autohost-api/current/autohost-api migrate up
-
-            # reiniciar servicio
             sudo systemctl restart autohost-api
             sudo systemctl status autohost-api --no-pager -l || true
