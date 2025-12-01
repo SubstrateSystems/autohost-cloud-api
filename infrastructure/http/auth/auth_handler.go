@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
@@ -114,21 +115,31 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // ----------------- helpers de cookies -----------------
 
 func isProd() bool {
-
-	e := "prod"
+	e := os.Getenv("ENV") // o APP_ENV
+	e = strings.ToLower(e)
 	return e == "prod" || e == "production"
 }
 
 func setAccessCookie(w http.ResponseWriter, token string) {
-	http.SetCookie(w, &http.Cookie{
+	cookie := &http.Cookie{
 		Name:     "access_token",
 		Value:    token,
-		Path:     "/",                  // disponible en todo el sitio
-		HttpOnly: true,                 // no accesible por JS
-		SameSite: http.SameSiteLaxMode, // suficiente para same-site (localhost)
-		Secure:   isProd(),             // en dev (HTTP) debe ser false
-		MaxAge:   15 * 60,              // 15 minutos
-	})
+		Path:     "/",     // disponible en todo el sitio
+		HttpOnly: true,    // no accesible por JS
+		MaxAge:   15 * 60, // 15 minutos
+	}
+
+	if isProd() {
+		cookie.Domain = ".autohst.dev"         // 👈 comparte entre cloud. y api.
+		cookie.Secure = true                   // HTTPS obligatorio
+		cookie.SameSite = http.SameSiteLaxMode // same-site (autohst.dev)
+	} else {
+		// Dev: normalmente ambos son localhost
+		cookie.SameSite = http.SameSiteLaxMode
+		cookie.Secure = false
+	}
+
+	http.SetCookie(w, cookie)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
