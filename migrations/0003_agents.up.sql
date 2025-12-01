@@ -29,7 +29,7 @@ WHERE status = 'active';
 CREATE TABLE agent_tokens (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_id      UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
-  token_hash    TEXT NOT NULL,                 -- nunca guardes el token en claro
+  token_hash    TEXT NOT NULL,          
   expires_at    TIMESTAMPTZ NOT NULL,
   revoked_at    TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -38,7 +38,8 @@ CREATE TABLE agent_tokens (
 CREATE INDEX idx_agent_tokens_agent ON agent_tokens(agent_id);
 CREATE INDEX idx_agent_tokens_valid
   ON agent_tokens(agent_id, expires_at)
-  WHERE revoked_at IS NULL AND expires_at > now();
+  WHERE revoked_at IS NULL;
+
 
 
 CREATE TABLE enroll_tokens (
