@@ -46,8 +46,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: autohost-api-binaries
-          path: .   
-
+          path: dist  
       - name: Debug - list files
         run: |
           echo "Contenido del workspace:"
