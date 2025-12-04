@@ -4,16 +4,16 @@ import "time"
 
 // Node representa un nodo/servidor registrado en el sistema
 type Node struct {
-	ID           string
-	Hostname     string
-	IPLocal      string
-	OS           string
-	Arch         string
-	VersionAgent string
-	OwnerID      *string
-	LastSeenAt   *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string     `db:"id"`
+	Hostname     string     `db:"hostname"`
+	IPLocal      string     `db:"ip_local"`
+	OS           string     `db:"os"`
+	Arch         string     `db:"arch"`
+	VersionAgent string     `db:"version_agent"`
+	OwnerID      *string    `db:"owner_id"`
+	LastSeenAt   *time.Time `db:"last_seen_at"`
+	CreatedAt    time.Time  `db:"created_at"`
+	UpdatedAt    time.Time  `db:"updated_at"`
 }
 
 // Repository define las operaciones de persistencia para nodos

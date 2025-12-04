@@ -4,12 +4,12 @@ import "time"
 
 // User representa un usuario del sistema
 type User struct {
-	ID           string
-	Email        string
-	Name         *string
-	PasswordHash string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string    `db:"id"`
+	Email        string    `db:"email"`
+	Name         *string   `db:"name"`
+	PasswordHash string    `db:"password_hash"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
 }
 
 // Repository define las operaciones de persistencia para usuarios

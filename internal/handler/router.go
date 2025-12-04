@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
+	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
@@ -34,19 +35,22 @@ func NewRouter(cfg *Config) http.Handler {
 	// Inicializar repositorios
 	authRepo := postgres.NewAuthRepository(cfg.DB)
 	nodeRepo := postgres.NewNodeRepository(cfg.DB)
+	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
 
 	// Inicializar servicios
 	authService := auth.NewService(authRepo)
 	nodeService := node.NewService(nodeRepo)
-
+	enrollmentService := enrollment.NewService(enrollmentRepo)
 	// Inicializar handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
+	enrollmentHandler := NewEnrollmentHandler(enrollmentService)
 
 	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())
 		r.Mount("/nodes", nodeHandler.Routes())
+		r.Mount("/enrollments", enrollmentHandler.Routes())
 	})
 
 	return r
