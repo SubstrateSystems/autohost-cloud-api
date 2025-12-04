@@ -1,25 +1,24 @@
-package http
+package handler
 
 import (
 	"net/http"
 	"os"
 
-	"github.com/arturo/autohost-cloud-api/infrastructure/http/auth"
-	"github.com/arturo/autohost-cloud-api/infrastructure/http/node"
-	nodepg "github.com/arturo/autohost-cloud-api/infrastructure/persistence/node-pg"
-	"github.com/arturo/autohost-cloud-api/internal/adapters/db/repo"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
+
+	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
+	"github.com/arturo/autohost-cloud-api/internal/domain/node"
+	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
 
-// RouterConfig contiene las dependencias necesarias para configurar el router
-type RouterConfig struct {
+type Config struct {
 	DB *sqlx.DB
 }
 
 // NewRouter crea y configura el router principal de la aplicación
-func NewRouter(cfg *RouterConfig) http.Handler {
+func NewRouter(cfg *Config) http.Handler {
 	r := chi.NewRouter()
 
 	// Middlewares globales
@@ -32,50 +31,33 @@ func NewRouter(cfg *RouterConfig) http.Handler {
 	// Health check
 	r.Get("/health", healthCheckHandler)
 
+	// Inicializar repositorios
+	authRepo := postgres.NewAuthRepository(cfg.DB)
+	nodeRepo := postgres.NewNodeRepository(cfg.DB)
+
+	// Inicializar servicios
+	authService := auth.NewService(authRepo)
+	nodeService := node.NewService(nodeRepo)
+
+	// Inicializar handlers
+	authHandler := NewAuthHandler(authService, authRepo)
+	nodeHandler := NewNodeHandler(nodeService)
+
 	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
-		// Auth routes
-		r.Mount("/auth", authRoutes(cfg.DB))
-
-		// Node routes
-		r.Mount("/nodes", nodeRoutes(cfg.DB))
-
-		// Aquí puedes agregar más módulos:
-		// r.Mount("/agents", agentRoutes(cfg.DB))
-		// r.Mount("/heartbeats", heartbeatRoutes(cfg.DB))
+		r.Mount("/auth", authHandler.Routes())
+		r.Mount("/nodes", nodeHandler.Routes())
 	})
 
 	return r
 }
 
-// authRoutes configura las rutas de autenticación
-func authRoutes(db *sqlx.DB) http.Handler {
-	authRepo := repo.NewAuthRepo(db)
-	authHandler := &auth.AuthHandler{
-		R:  authRepo,
-		DB: db,
-	}
-	return authHandler.Routes()
-}
-
-// nodeRoutes configura las rutas de nodos
-func nodeRoutes(db *sqlx.DB) http.Handler {
-	nodeRepo := nodepg.NewNodeRepo(db)
-	nodeHandler := &node.NodeHandler{
-		R:  nodeRepo,
-		DB: db,
-	}
-	return nodeHandler.Routes()
-}
-
-// healthCheckHandler maneja el endpoint de health check
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"ok","service":"autohost-cloud-api"}`))
 }
 
-// corsMiddleware configura CORS para la API
 func corsMiddleware(next http.Handler) http.Handler {
 	frontendURL := os.Getenv("FRONTEND_URL")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

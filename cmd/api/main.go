@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	httpInfra "github.com/arturo/autohost-cloud-api/infrastructure/http"
+	"github.com/arturo/autohost-cloud-api/internal/handler"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -25,7 +25,7 @@ func main() {
 	defer db.Close()
 
 	// Configurar el router con todas las dependencias
-	router := httpInfra.NewRouter(&httpInfra.RouterConfig{
+	router := handler.NewRouter(&handler.Config{
 		DB: db,
 	})
 

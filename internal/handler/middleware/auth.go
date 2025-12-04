@@ -1,5 +1,4 @@
-// internal/http/auth.go
-package auth
+package middleware
 
 import (
 	"context"
@@ -26,7 +25,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Lazy-load JWT secret on first use (after .env is loaded)
 		if jwtSecret == nil {

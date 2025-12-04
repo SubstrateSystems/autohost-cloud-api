@@ -1,0 +1,19 @@
+curl -i -X POST http://localhost:8080/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"develop@gmail.com","name":"dev","password":"123456"}'
+
+curl -i -X POST http://localhost:8080/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"dw","password":"123456"}'
+
+
+toke:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI4ZmYwM2Q1MC02OTQ4LTRiMmEtYTU5ZS0zZjkxN2I2NzY5YzMiLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzYyNzQzOTg5LCJpYXQiOjE3NjI3NDMwODl9.NFmCIaiLXLz1jxQ5DitXuRXbuMImvmGNaGZp9qficAg
+curl -i -X POST http://10.195.65.1:8080/v1/nodes/register \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI4ZmYwM2Q1MC02OTQ4LTRiMmEtYTU5ZS0zZjkxN2I2NzY5YzMiLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzYyNzQ2NjI5LCJpYXQiOjE3NjI3NDU3Mjl9.kgtLekXU8A1TsE40c9t3PWevMaeMft6Z4Gvv4lJJdlM" \
+  -H "Content-Type: application/json" \
+  -d '{"hostName":"pi-lab01","os":"linux","arch":"arm64"}'
+
+
+
+heartbeat
