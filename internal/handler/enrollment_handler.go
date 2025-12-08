@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -110,8 +109,6 @@ func (h *EnrollmentHandler) EnrollNode(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid token", http.StatusUnauthorized)
 		return
 	}
-
-	fmt.Printf("%+v\n", enroll)
 
 	if enroll.ConsumedAt != nil {
 		http.Error(w, "token already used", http.StatusUnauthorized)
