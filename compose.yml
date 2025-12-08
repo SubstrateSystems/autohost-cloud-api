@@ -10,7 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./infrastructure/db/init:/docker-entrypoint-initdb.d:ro
+      # - ./infrastructure/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U autohost -d autohost"]
       interval: 5s
@@ -22,7 +22,7 @@ services:
     image: dpage/pgadmin4:8
     container_name: ahcl-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: dev@local.test
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
       PGADMIN_DEFAULT_PASSWORD: devpass
     ports:
       - "5050:80"

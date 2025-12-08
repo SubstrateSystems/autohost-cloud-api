@@ -1,0 +1,22 @@
+package nodetoken
+
+import "errors"
+
+var (
+	ErrInvalidNodeTokenData = errors.New("invalid node token data")
+)
+
+type Service struct {
+	repo Repository
+}
+
+func NewService(repo Repository) *Service {
+	return &Service{repo: repo}
+}
+
+func (s *Service) CreateNodeToken(nodeID, tokenHash string) error {
+	if nodeID == "" || tokenHash == "" {
+		return ErrInvalidNodeTokenData
+	}
+	return s.repo.CreateNodeToken(nodeID, tokenHash)
+}

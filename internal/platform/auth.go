@@ -1,11 +1,13 @@
-// internal/platform/auth.go
 package platform
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type JWTClaims struct {
@@ -46,4 +48,24 @@ func ParseAccessToken(tok string) (*JWTClaims, error) {
 		return claims, nil
 	}
 	return nil, jwt.ErrSignatureInvalid
+}
+
+// MakeRefreshPair genera un token de refresco y su hash
+func MakeRefreshPair() (plain string, hash string) {
+	plain = uuid.NewString()
+	return plain, HashRefreshToken(plain)
+}
+
+// HashRefreshToken crea un hash SHA-256 del token
+func HashRefreshToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return base64.RawURLEncoding.EncodeToString(h[:])
+}
+
+// ParseRefreshToken extrae información del token de refresco
+// En MVP retorna vacío, en producción podría ser un JWT
+func ParseRefreshToken(plain string) (userID string, email string, err error) {
+	// MVP: el refresh token no lleva datos embebidos
+	// En producción podría ser un JWT con claims
+	return "", "", nil
 }

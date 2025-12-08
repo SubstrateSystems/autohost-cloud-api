@@ -11,7 +11,7 @@ bin = "tmp/api"
 
 # archivos/directorios que observar
 include_ext = ["go", "tpl", "tmpl", "html"]
-include_dir = ["cmd", "internal", "infrastructure", "migrations"]
+include_dir = ["cmd", "internal", "migrations"]
 exclude_dir = ["tmp", "vendor", ".git"]
 delay = 200        # ms de debounce
 kill_delay = 500   # ms para matar proceso anterior

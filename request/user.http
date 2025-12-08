@@ -1,0 +1,52 @@
+### Variables
+@baseUrl = http://localhost:8080/v1
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIyYTM5NmZkNS0wZmQyLTRkYmQtYTg3NC1mYTY1YTRmZDc1ZDciLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzY1MjI5MTQ2LCJpYXQiOjE3NjUyMjgyNDZ9.GVPyP3pIvED2R3izhMHkiTfP_QcjHAVMU4GAzI1BLas
+
+### Register User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "develop@gmail.com",
+  "name": "dev",
+  "password": "123456"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "develop@gmail.com",
+  "password": "123456"
+}
+
+### Generate Enrollment Token
+POST {{baseUrl}}/enrollments/generate
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### Enroll Node
+POST {{baseUrl}}/enrollments/enroll
+Content-Type: application/json
+
+{
+  "enroll_token": "autohost-enr_9WDWHurp-hJqnuKkWA93TUZH9njuxxzCkSbsl3QMB9E",
+  "hostname": "pi-lab01",
+  "ip_local": "192.168.1.100",
+  "os": "linux",
+  "arch": "arm64",
+  "version_agent": "1.0.0"
+}
+
+### Register Node
+# POST {{baseUrl}}/nodes/register
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+
+# {
+#   "hostname": "pi-lab01",
+#   "os": "linux",
+#   "arch": "arm64"
+# }

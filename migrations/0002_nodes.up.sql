@@ -14,8 +14,5 @@ CREATE TABLE nodes (
 CREATE INDEX idx_nodes_hostname ON nodes(hostname);
 
 
-ALTER TABLE nodes
-  DROP COLUMN IF EXISTS version_agent;
-
 CREATE UNIQUE INDEX ux_nodes_owner_host
   ON nodes(owner_id, hostname);
