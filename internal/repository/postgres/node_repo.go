@@ -19,7 +19,7 @@ func NewNodeRepository(db *sqlx.DB) *NodeRepository {
 }
 
 // Create crea un nuevo nodo
-func (r *NodeRepository) Create(n *node.Node) error {
+func (r *NodeRepository) Create(n *node.Node) (*node.Node, error) {
 	var model NodeModel
 	err := r.db.QueryRowContext(context.Background(), `
 		INSERT INTO nodes (hostname, ip_local, os, arch, version_agent, owner_id)
@@ -38,7 +38,7 @@ func (r *NodeRepository) Create(n *node.Node) error {
 		&model.UpdatedAt,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Actualizar el nodo con los datos devueltos
@@ -47,7 +47,7 @@ func (r *NodeRepository) Create(n *node.Node) error {
 	n.CreatedAt = model.CreatedAt
 	n.UpdatedAt = model.UpdatedAt
 
-	return nil
+	return n, nil
 }
 
 // FindByID busca un nodo por ID

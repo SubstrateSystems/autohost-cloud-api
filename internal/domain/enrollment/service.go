@@ -25,3 +25,17 @@ func (s *Service) CreateEnrollToken(token string, userID string, expiresAt time.
 	}
 	return s.repo.CreateEnrollToken(token, userID, expiresAt)
 }
+
+func (s *Service) FindEnrollTokenByHash(token string) (*EnrollToken, error) {
+	if token == "" {
+		return nil, ErrInvalidEnrollTokenData
+	}
+	return s.repo.FindEnrollTokenByHash(token)
+}
+
+func (s *Service) MarkTokenAsUsed(token string, usedAt time.Time) error {
+	if token == "" {
+		return ErrInvalidEnrollTokenData
+	}
+	return s.repo.MarkTokenAsUsed(token, usedAt)
+}

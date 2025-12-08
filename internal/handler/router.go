@@ -11,6 +11,7 @@ import (
 	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
 	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
+	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
 
@@ -36,16 +37,17 @@ func NewRouter(cfg *Config) http.Handler {
 	authRepo := postgres.NewAuthRepository(cfg.DB)
 	nodeRepo := postgres.NewNodeRepository(cfg.DB)
 	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
+	nodeTokenRepo := postgres.NewNodeTokenRepository(cfg.DB)
 
 	// Inicializar servicios
 	authService := auth.NewService(authRepo)
 	nodeService := node.NewService(nodeRepo)
 	enrollmentService := enrollment.NewService(enrollmentRepo)
+	nodeTokenService := nodetoken.NewService(nodeTokenRepo)
 	// Inicializar handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
-	enrollmentHandler := NewEnrollmentHandler(enrollmentService)
-
+	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
 	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())

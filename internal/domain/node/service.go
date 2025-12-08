@@ -19,9 +19,9 @@ func NewService(repo Repository) *Service {
 }
 
 // Register registra un nuevo nodo
-func (s *Service) Register(node *Node) error {
+func (s *Service) Register(node *Node) (*Node, error) {
 	if node.Hostname == "" {
-		return ErrInvalidNodeData
+		return nil, ErrInvalidNodeData
 	}
 	return s.repo.Create(node)
 }

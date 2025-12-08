@@ -18,7 +18,7 @@ type Node struct {
 
 // Repository define las operaciones de persistencia para nodos
 type Repository interface {
-	Create(node *Node) error
+	Create(node *Node) (*Node, error)
 	FindByID(id string) (*Node, error)
 	FindByOwnerID(ownerID string) ([]*Node, error)
 	Update(node *Node) error
