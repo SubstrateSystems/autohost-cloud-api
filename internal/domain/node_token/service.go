@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrInvalidNodeTokenData = errors.New("invalid node token data")
+	ErrNodeTokenNotFound    = errors.New("node token not found")
 )
 
 type Service struct {
@@ -19,4 +20,11 @@ func (s *Service) CreateNodeToken(nodeID, tokenHash string) error {
 		return ErrInvalidNodeTokenData
 	}
 	return s.repo.CreateNodeToken(nodeID, tokenHash)
+}
+
+func (s *Service) FindNodeTokenByHash(tokenHash string) (*NodeToken, error) {
+	if tokenHash == "" {
+		return nil, ErrInvalidNodeTokenData
+	}
+	return s.repo.FindNodeTokenByHash(tokenHash)
 }

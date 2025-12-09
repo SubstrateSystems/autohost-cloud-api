@@ -12,6 +12,7 @@ import (
 	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
 	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
+	handlerMiddleware "github.com/arturo/autohost-cloud-api/internal/handler/middleware"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
 
@@ -48,11 +49,17 @@ func NewRouter(cfg *Config) http.Handler {
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
 	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
+	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
+
+	// Crear middleware de autenticación de nodos
+	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
+
 	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())
 		r.Mount("/nodes", nodeHandler.Routes())
 		r.Mount("/enrollments", enrollmentHandler.Routes())
+		r.Mount("/heartbeats", heartbeatsHandler.Routes(nodeAuthMiddleware))
 	})
 
 	return r

@@ -1,0 +1,22 @@
+### Variables
+@baseUrl = http://localhost:8080/v1
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIyYTM5NmZkNS0wZmQyLTRkYmQtYTg3NC1mYTY1YTRmZDc1ZDciLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzY1MzA3NjY0LCJpYXQiOjE3NjUzMDY3NjR9.saLHG5UbgugBQwQdiFjHiSYjHj-JAynJTzQYOnMFJe4
+@enroll_token = autohost-enr_u5iipDBG72HB9u9i8uCifiG0_KbhNybcgUFFoWqNzXE
+
+### Generate Enrollment Token
+POST {{baseUrl}}/enrollments/generate
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+### Enroll Node
+POST {{baseUrl}}/enrollments/enroll
+Content-Type: application/json
+
+{
+  "enroll_token": "{{enroll_token}}",
+  "hostname": "pi-lab02",
+  "ip_local": "192.168.1.100",
+  "os": "linux",
+  "arch": "arm64",
+  "version_agent": "1.0.0"
+}

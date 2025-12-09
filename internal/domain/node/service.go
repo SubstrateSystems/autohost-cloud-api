@@ -23,7 +23,14 @@ func (s *Service) Register(node *Node) (*Node, error) {
 	if node.Hostname == "" {
 		return nil, ErrInvalidNodeData
 	}
-	return s.repo.Create(node)
+	return s.repo.Register(node)
+}
+
+func (s *Service) UpdateLastSeen(nodeID string) error {
+	if nodeID == "" {
+		return ErrInvalidNodeData
+	}
+	return s.repo.UpdateLastSeen(nodeID)
 }
 
 // GetByOwner obtiene todos los nodos de un propietario
