@@ -8,25 +8,28 @@ var (
 	ErrUnauthorized    = errors.New("unauthorized")
 )
 
-// Service encapsula la lógica de negocio de nodos
 type Service struct {
 	repo Repository
 }
 
-// NewService crea una nueva instancia del servicio de nodos
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-// Register registra un nuevo nodo
 func (s *Service) Register(node *Node) (*Node, error) {
 	if node.Hostname == "" {
 		return nil, ErrInvalidNodeData
 	}
-	return s.repo.Create(node)
+	return s.repo.Register(node)
 }
 
-// GetByOwner obtiene todos los nodos de un propietario
+func (s *Service) UpdateLastSeen(nodeID string) error {
+	if nodeID == "" {
+		return ErrInvalidNodeData
+	}
+	return s.repo.UpdateLastSeen(nodeID)
+}
+
 func (s *Service) GetByOwner(ownerID string) ([]*Node, error) {
 	return s.repo.FindByOwnerID(ownerID)
 }

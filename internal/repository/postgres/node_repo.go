@@ -18,8 +18,8 @@ func NewNodeRepository(db *sqlx.DB) *NodeRepository {
 	return &NodeRepository{db: db}
 }
 
-// Create crea un nuevo nodo
-func (r *NodeRepository) Create(n *node.Node) (*node.Node, error) {
+// Register crea un nuevo nodo
+func (r *NodeRepository) Register(n *node.Node) (*node.Node, error) {
 	var model NodeModel
 	err := r.db.QueryRowContext(context.Background(), `
 		INSERT INTO nodes (hostname, ip_local, os, arch, version_agent, owner_id)
@@ -50,7 +50,6 @@ func (r *NodeRepository) Create(n *node.Node) (*node.Node, error) {
 	return n, nil
 }
 
-// FindByID busca un nodo por ID
 func (r *NodeRepository) FindByID(id string) (*node.Node, error) {
 	var model NodeModel
 	err := r.db.Get(&model, `
@@ -113,19 +112,10 @@ func (r *NodeRepository) FindByOwnerID(ownerID string) ([]*node.Node, error) {
 	return nodes, nil
 }
 
-// Update actualiza un nodo
-func (r *NodeRepository) Update(n *node.Node) error {
-	_, err := r.db.Exec(`
+func (r *NodeRepository) UpdateLastSeen(nodeID string) error {
+	_, err := r.db.ExecContext(context.Background(), `
 		UPDATE nodes 
-		SET hostname = $1, ip_local = $2, os = $3, arch = $4, 
-		    version_agent = $5, last_seen_at = $6, updated_at = now()
-		WHERE id = $7`,
-		n.Hostname, n.IPLocal, n.OS, n.Arch, n.VersionAgent, n.LastSeenAt, n.ID)
-	return err
-}
-
-// Delete elimina un nodo
-func (r *NodeRepository) Delete(id string) error {
-	_, err := r.db.Exec(`DELETE FROM nodes WHERE id = $1`, id)
+		SET last_seen_at = now()
+		WHERE id = $1`, nodeID)
 	return err
 }

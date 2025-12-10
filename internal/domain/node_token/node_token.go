@@ -13,7 +13,6 @@ type NodeToken struct {
 
 type Repository interface {
 	CreateNodeToken(nodeID, token string) error
-	// FindValidToken(token string) (*NodeToken, error)
-	// RevokeToken(tokenID string, revokedAt time.Time) error
-	// UpdateLastSeen(tokenID string, lastSeenAt time.Time) error
+	FindNodeTokenByHash(tokenHash string) (*NodeToken, error)
+	UpdateLastSeen(tokenID string, lastSeenAt time.Time) error
 }

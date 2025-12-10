@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -98,11 +99,12 @@ func (h *EnrollmentHandler) EnrollNode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.EnrollToken == "" {
+		fmt.Println("here", req.EnrollToken)
 		http.Error(w, "missing enroll_token", http.StatusBadRequest)
 		return
 	}
 
-	hash := platform.HashTokenApi(req.EnrollToken)
+	hash := platform.HashEnrollToken(req.EnrollToken)
 
 	enroll, err := h.service.FindEnrollTokenByHash(hash)
 	if err != nil {
