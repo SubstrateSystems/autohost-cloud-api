@@ -24,14 +24,6 @@ func (h *NodeHandler) Routes() chi.Router {
 	return r
 }
 
-type nodeRegisterRequest struct {
-	Hostname     string `json:"hostname"`
-	IPLocal      string `json:"ip_local"`
-	OS           string `json:"os"`
-	Arch         string `json:"arch"`
-	VersionAgent string `json:"version_agent"`
-}
-
 func (h *NodeHandler) List(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.GetClaims(r.Context())
 	if claims == nil || claims.UserID == "" {

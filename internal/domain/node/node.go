@@ -22,7 +22,4 @@ type Repository interface {
 	FindByID(id string) (*Node, error)
 	FindByOwnerID(ownerID string) ([]*Node, error)
 	UpdateLastSeen(nodeID string) error
-
-	// Update(node *Node) error
-	// Delete(id string) error
 }

@@ -1,7 +1,7 @@
 ### Variables
 @baseUrl = http://localhost:8080/v1
-@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIyYTM5NmZkNS0wZmQyLTRkYmQtYTg3NC1mYTY1YTRmZDc1ZDciLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzY1MzA3NjY0LCJpYXQiOjE3NjUzMDY3NjR9.saLHG5UbgugBQwQdiFjHiSYjHj-JAynJTzQYOnMFJe4
-@enroll_token = autohost-enr_u5iipDBG72HB9u9i8uCifiG0_KbhNybcgUFFoWqNzXE
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIyYTM5NmZkNS0wZmQyLTRkYmQtYTg3NC1mYTY1YTRmZDc1ZDciLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzY1MzEyNDcyLCJpYXQiOjE3NjUzMTE1NzJ9.V2EykT8ePgriljSJXXeFhVPnPazV49p0z9kv9h4XDGQ
+@enroll_token = autohost-enr_yduO8volPIA6aFTegI7aCaWGZjxe9xQA3Y3PAY6tEdg
 
 ### Generate Enrollment Token
 POST {{baseUrl}}/enrollments/generate
@@ -14,7 +14,7 @@ Content-Type: application/json
 
 {
   "enroll_token": "{{enroll_token}}",
-  "hostname": "pi-lab02",
+  "hostname": "pi-lab03",
   "ip_local": "192.168.1.100",
   "os": "linux",
   "arch": "arm64",

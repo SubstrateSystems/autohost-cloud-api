@@ -50,7 +50,6 @@ func (r *NodeRepository) Register(n *node.Node) (*node.Node, error) {
 	return n, nil
 }
 
-// FindByID busca un nodo por ID
 func (r *NodeRepository) FindByID(id string) (*node.Node, error) {
 	var model NodeModel
 	err := r.db.Get(&model, `

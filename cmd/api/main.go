@@ -34,6 +34,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 API running on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	addr := "0.0.0.0:" + port
+	log.Printf("🚀 API running on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }

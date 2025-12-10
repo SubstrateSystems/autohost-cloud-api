@@ -1,0 +1,6 @@
+@baseUrl = http://localhost:8080/v1
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIyYTM5NmZkNS0wZmQyLTRkYmQtYTg3NC1mYTY1YTRmZDc1ZDciLCJlbWFpbCI6ImRldmVsb3BAZ21haWwuY29tIiwiZXhwIjoxNzY1MzE2NDU1LCJpYXQiOjE3NjUzMTU1NTV9.adJZn9SyaluOfzFZygaabS5PPg-h4cD-E3g1-FpC4k4
+
+### List Nodes
+GET {{baseUrl}}/nodes
+Authorization: Bearer {{access_token}}
