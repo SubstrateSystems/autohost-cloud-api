@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	httpInfra "github.com/arturo/autohost-cloud-api/infrastructure/http"
+	"github.com/arturo/autohost-cloud-api/internal/handler"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -25,7 +25,7 @@ func main() {
 	defer db.Close()
 
 	// Configurar el router con todas las dependencias
-	router := httpInfra.NewRouter(&httpInfra.RouterConfig{
+	router := handler.NewRouter(&handler.Config{
 		DB: db,
 	})
 
@@ -34,6 +34,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 API running on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	addr := "0.0.0.0:" + port
+	log.Printf("🚀 API running on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }

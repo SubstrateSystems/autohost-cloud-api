@@ -1,0 +1,98 @@
+package middleware
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var jwtSecret []byte
+
+type ctxKey int
+
+const claimsKey ctxKey = iota
+
+type Claims struct {
+	UserID string `json:"uid"`
+	Email  string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+func Auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Lazy-load JWT secret on first use (after .env is loaded)
+		if jwtSecret == nil {
+			jwtSecret = mustJWTSecret()
+		}
+
+		authz := r.Header.Get("Authorization")
+		parts := strings.SplitN(authz, " ", 2)
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			http.Error(w, "invalid Authorization header", http.StatusUnauthorized)
+			return
+		}
+		raw := parts[1]
+
+		parser := jwt.NewParser(
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
+			jwt.WithLeeway(30*time.Second),
+		)
+
+		token, err := parser.ParseWithClaims(raw, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %s", t.Method.Alg())
+			}
+			return jwtSecret, nil
+		})
+		if err != nil {
+			// Distingue expirado para mejor DX
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				http.Error(w, "token expired", http.StatusUnauthorized)
+				return
+			}
+			log.Printf("[AUTH] jwt parse/validate error: %v", err)
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+		if !token.Valid {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		claims, ok := token.Claims.(*Claims)
+		if !ok {
+			http.Error(w, "invalid claims", http.StatusUnauthorized)
+			return
+		}
+
+		// (Opcional extra) valida issuer/audience si los usas:
+		// if claims.Issuer != "autohost-cloud" { ... }
+
+		ctx := context.WithValue(r.Context(), claimsKey, claims)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetClaims(ctx context.Context) *Claims {
+	if v := ctx.Value(claimsKey); v != nil {
+		if c, ok := v.(*Claims); ok {
+			return c
+		}
+	}
+	return nil
+}
+
+func mustJWTSecret() []byte {
+	s := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if s == "" {
+		log.Fatal("JWT_SECRET missing")
+	}
+	return []byte(s) // mismo tratamiento que al firmar
+}
