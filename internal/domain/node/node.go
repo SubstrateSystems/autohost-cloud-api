@@ -21,5 +21,6 @@ type Repository interface {
 	Register(node *Node) (*Node, error)
 	FindByID(id string) (*Node, error)
 	FindByOwnerID(ownerID string) ([]*Node, error)
+	FindByOwnerIDWithMetrics(ownerID string) ([]*NodeWithMetrics, error)
 	UpdateLastSeen(nodeID string) error
 }

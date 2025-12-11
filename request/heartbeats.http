@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8080/v1
-@node_token = autohost-node_uhX9PjAIyygWsKImMYKbgjkMoWnbbHDcWfKAcqypwgI
+@node_token = autohost-node_HaeEcy9zv1zyIdlXqdcS4dk8ipcuSN8ZGRrMHDzXamo
 
 
 ### Send Heartbeat

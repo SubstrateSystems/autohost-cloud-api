@@ -33,3 +33,8 @@ func (s *Service) UpdateLastSeen(nodeID string) error {
 func (s *Service) GetByOwner(ownerID string) ([]*Node, error) {
 	return s.repo.FindByOwnerID(ownerID)
 }
+
+// GetByOwnerWithMetrics obtiene todos los nodos de un propietario con sus últimas métricas
+func (s *Service) GetByOwnerWithMetrics(ownerID string) ([]*NodeWithMetrics, error) {
+	return s.repo.FindByOwnerIDWithMetrics(ownerID)
+}

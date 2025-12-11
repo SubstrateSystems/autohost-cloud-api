@@ -119,3 +119,61 @@ func (r *NodeRepository) UpdateLastSeen(nodeID string) error {
 		WHERE id = $1`, nodeID)
 	return err
 }
+
+// FindByOwnerIDWithMetrics busca todos los nodos de un propietario con sus últimas métricas
+func (r *NodeRepository) FindByOwnerIDWithMetrics(ownerID string) ([]*node.NodeWithMetrics, error) {
+	var results []*node.NodeWithMetrics
+
+	query := `
+		SELECT 
+			n.id, n.hostname, n.ip_local, n.os, n.arch, n.version_agent, 
+			n.owner_id, n.last_seen_at, n.created_at, n.updated_at,
+			m.cpu_usage_percent, m.memory_usage_percent, m.disk_usage_percent, m.collected_at
+		FROM nodes n
+		LEFT JOIN LATERAL (
+			SELECT cpu_usage_percent, memory_usage_percent, disk_usage_percent, collected_at
+			FROM node_metrics
+			WHERE node_id = n.id
+			ORDER BY collected_at DESC
+			LIMIT 1
+		) m ON true
+		WHERE n.owner_id = $1
+		ORDER BY n.created_at DESC
+	`
+
+	rows, err := r.db.Queryx(query, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var nwm node.NodeWithMetrics
+		var cpuUsage, memUsage, diskUsage sql.NullFloat64
+		var collectedAt sql.NullTime
+
+		err := rows.Scan(
+			&nwm.ID, &nwm.Hostname, &nwm.IPLocal, &nwm.OS, &nwm.Arch,
+			&nwm.VersionAgent, &nwm.OwnerID, &nwm.LastSeenAt,
+			&nwm.CreatedAt, &nwm.UpdatedAt,
+			&cpuUsage, &memUsage, &diskUsage, &collectedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Si hay métricas, agregarlas
+		if cpuUsage.Valid {
+			nwm.LastMetric = &node.LastMetric{
+				CPUUsagePercent:    cpuUsage.Float64,
+				MemoryUsagePercent: memUsage.Float64,
+				DiskUsagePercent:   diskUsage.Float64,
+				CollectedAt:        collectedAt.Time,
+			}
+		}
+
+		results = append(results, &nwm)
+	}
+
+	return results, nil
+}
