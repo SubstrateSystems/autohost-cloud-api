@@ -11,6 +11,7 @@ import (
 	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
 	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
+	nodemetric "github.com/arturo/autohost-cloud-api/internal/domain/node_metric"
 	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
 	handlerMiddleware "github.com/arturo/autohost-cloud-api/internal/handler/middleware"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
@@ -37,17 +38,20 @@ func NewRouter(cfg *Config) http.Handler {
 	// Inicializar repositorios
 	authRepo := postgres.NewAuthRepository(cfg.DB)
 	nodeRepo := postgres.NewNodeRepository(cfg.DB)
+	nodeMetricRepor := postgres.NewNodeMetricRepository(cfg.DB)
 	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
 	nodeTokenRepo := postgres.NewNodeTokenRepository(cfg.DB)
 
 	// Inicializar servicios
 	authService := auth.NewService(authRepo)
 	nodeService := node.NewService(nodeRepo)
+	nodeMetricService := nodemetric.NewService(nodeMetricRepor)
 	enrollmentService := enrollment.NewService(enrollmentRepo)
 	nodeTokenService := nodetoken.NewService(nodeTokenRepo)
 	// Inicializar handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
+	nodeMetricHandler := NewNodeMetricHandler(nodeMetricService)
 	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
 	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
 
@@ -58,6 +62,7 @@ func NewRouter(cfg *Config) http.Handler {
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())
 		r.Mount("/nodes", nodeHandler.Routes())
+		r.Mount("/node-metrics", nodeMetricHandler.Routes(nodeAuthMiddleware))
 		r.Mount("/enrollments", enrollmentHandler.Routes())
 		r.Mount("/heartbeats", heartbeatsHandler.Routes(nodeAuthMiddleware))
 	})
