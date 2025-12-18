@@ -85,7 +85,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Usar el servicio para autenticar
 	user, err := h.service.Login(in.Email, in.Password)
 	if err == auth.ErrInvalidCredentials {
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
@@ -188,19 +187,20 @@ func setAccessCookie(w http.ResponseWriter, token string) {
 }
 
 func setRefreshCookie(w http.ResponseWriter, rt string) {
-	ttl := 30 * 24 * time.Hour
+	ttl := 24 * time.Hour
 	if v := os.Getenv("REFRESH_TOKEN_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			ttl = d
 		}
 	}
+	println(rt)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    rt,
 		Path:     "/v1/auth",
 		MaxAge:   int(ttl.Seconds()),
 		HttpOnly: true,
-		Secure:   true, // en dev, si no usas https, puedes poner false temporalmente
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
