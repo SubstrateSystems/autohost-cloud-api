@@ -18,9 +18,6 @@ jobs:
         with:
           go-version: "1.25" 
 
-      # - name: Run tests
-      #   run: go test ./...
-
       - name: Build Linux binaries
         run: |
           mkdir -p dist
@@ -35,7 +32,6 @@ jobs:
         with:
           name: autohost-api-binaries
           path: dist
-          # Esto sube TODO lo que haya dentro de dist/
 
   deploy:
     runs-on: ubuntu-latest
@@ -59,8 +55,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "dist/**"       # 👈 TODO lo que está en dist/
-          target: "/tmp/autohost" # 👈 carpeta temporal en el server
+          source: "dist/**"      
+          target: "/tmp/autohost" 
 
       - name: SSH & deploy
         uses: appleboy/ssh-action@v0.1.10

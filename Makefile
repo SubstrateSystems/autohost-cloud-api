@@ -11,6 +11,7 @@ docker:
 	docker build -t autohost-cloud-lite .
 
 run-air:
+	docker compose up -d
 	air -c .air.toml
 
 
