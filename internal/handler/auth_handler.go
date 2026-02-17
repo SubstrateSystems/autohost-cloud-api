@@ -69,13 +69,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generar tokens
-	access, _ := platform.SignAccessToken(userID, in.Email)
-	rt, rtHash := platform.MakeRefreshPair()
+	platform.SignAccessToken(userID, in.Email)
+	_, rtHash := platform.MakeRefreshPair()
 
 	_ = h.repo.StoreRefreshToken(userID, rtHash, r.UserAgent(), clientIP(r))
 
-	setRefreshCookie(w, rt)
-	json.NewEncoder(w).Encode(map[string]any{"access_token": access})
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {

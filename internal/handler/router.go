@@ -54,6 +54,7 @@ func NewRouter(cfg *Config) http.Handler {
 	nodeMetricHandler := NewNodeMetricHandler(nodeMetricService)
 	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
 	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
+	wsHandler := NewWSHandler()
 
 	// Crear middleware de autenticación de nodos
 	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
@@ -65,6 +66,7 @@ func NewRouter(cfg *Config) http.Handler {
 		r.Mount("/node-metrics", nodeMetricHandler.Routes(nodeAuthMiddleware))
 		r.Mount("/enrollments", enrollmentHandler.Routes())
 		r.Mount("/heartbeats", heartbeatsHandler.Routes(nodeAuthMiddleware))
+		r.Mount("/ws", wsHandler.Routes(nodeAuthMiddleware))
 	})
 
 	return r
