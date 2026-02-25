@@ -10,7 +10,9 @@ import (
 
 	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
 	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
+	"github.com/arturo/autohost-cloud-api/internal/domain/job"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
+	nodecommand "github.com/arturo/autohost-cloud-api/internal/domain/node_command"
 	nodemetric "github.com/arturo/autohost-cloud-api/internal/domain/node_metric"
 	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
 	handlerMiddleware "github.com/arturo/autohost-cloud-api/internal/handler/middleware"
@@ -41,6 +43,8 @@ func NewRouter(cfg *Config) http.Handler {
 	nodeMetricRepor := postgres.NewNodeMetricRepository(cfg.DB)
 	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
 	nodeTokenRepo := postgres.NewNodeTokenRepository(cfg.DB)
+	nodeCommandRepo := postgres.NewNodeCommandRepository(cfg.DB)
+	jobRepo := postgres.NewJobRepository(cfg.DB)
 
 	// Inicializar servicios
 	authService := auth.NewService(authRepo)
@@ -48,16 +52,21 @@ func NewRouter(cfg *Config) http.Handler {
 	nodeMetricService := nodemetric.NewService(nodeMetricRepor)
 	enrollmentService := enrollment.NewService(enrollmentRepo)
 	nodeTokenService := nodetoken.NewService(nodeTokenRepo)
+	nodeCommandService := nodecommand.NewService(nodeCommandRepo)
+	jobService := job.NewService(jobRepo)
+
+	// Crear middleware de autenticación de nodos
+	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
+
 	// Inicializar handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
 	nodeMetricHandler := NewNodeMetricHandler(nodeMetricService)
 	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
 	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
-	wsHandler := NewWSHandler()
-
-	// Crear middleware de autenticación de nodos
-	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
+	wsHandler := NewWSHandler(jobService, nodeCommandService)
+	nodeCommandHandler := NewNodeCommandHandler(nodeCommandService)
+	jobHandler := NewJobHandler(jobService, wsHandler)
 
 	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
@@ -66,6 +75,8 @@ func NewRouter(cfg *Config) http.Handler {
 		r.Mount("/node-metrics", nodeMetricHandler.Routes(nodeAuthMiddleware))
 		r.Mount("/enrollments", enrollmentHandler.Routes())
 		r.Mount("/heartbeats", heartbeatsHandler.Routes(nodeAuthMiddleware))
+		r.Mount("/node-commands", nodeCommandHandler.Routes(nodeAuthMiddleware))
+		r.Mount("/jobs", jobHandler.Routes())
 		r.Mount("/ws", wsHandler.Routes(nodeAuthMiddleware))
 	})
 
