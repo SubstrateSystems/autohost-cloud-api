@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package node_agent.v1;
+
+option go_package = "github.com/arturo/autohost-cloud-api/internal/grpc/nodepb";
+
+// ─── Shared enums ────────────────────────────────────────────────────────────
+
+enum CommandType {
+  COMMAND_TYPE_DEFAULT = 0;
+  COMMAND_TYPE_CUSTOM  = 1;
+}
+
+enum JobStatus {
+  JOB_STATUS_RUNNING   = 0;
+  JOB_STATUS_COMPLETED = 1;
+  JOB_STATUS_FAILED    = 2;
+}
+
+// ─── RegisterCommands ────────────────────────────────────────────────────────
+// The agent calls this on startup to announce the commands it supports.
+// Each message in the client stream is one command; the server responds once.
+
+message RegisterCommandRequest {
+  string node_id     = 1;  // validated against the auth token server-side
+  string name        = 2;
+  string description = 3;
+  CommandType type   = 4;
+  string script_path = 5;  // only set for COMMAND_TYPE_CUSTOM
+}
+
+message RegisterCommandsResponse {
+  int32  registered = 1;   // total commands upserted in this batch
+}
+
+// ─── Connect (bidirectional streaming) ───────────────────────────────────────
+// The agent opens a single long-lived stream.
+//   agent  → server : NodeMessage  (job results, heartbeats)
+//   server → agent  : ServerMessage (execute_job commands)
+
+message NodeMessage {
+  oneof payload {
+    JobResultPayload  job_result  = 1;
+    HeartbeatPayload  heartbeat   = 2;
+  }
+}
+
+message ServerMessage {
+  oneof payload {
+    ExecuteJobPayload execute_job = 1;
+  }
+}
+
+message JobResultPayload {
+  string    job_id  = 1;
+  JobStatus status  = 2;
+  string    output  = 3;
+  string    error   = 4;
+}
+
+message HeartbeatPayload {
+  string node_id = 1;
+}
+
+message ExecuteJobPayload {
+  string      job_id       = 1;
+  string      command_name = 2;
+  CommandType command_type = 3;
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
+service NodeAgentService {
+  // Agent streams its commands; server upserts them all, then acks.
+  rpc RegisterCommands(stream RegisterCommandRequest) returns (RegisterCommandsResponse);
+
+  // Long-lived bidirectional stream used to dispatch jobs and receive results.
+  rpc Connect(stream NodeMessage) returns (stream ServerMessage);
+}

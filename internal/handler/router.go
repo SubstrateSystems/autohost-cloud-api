@@ -10,9 +10,12 @@ import (
 
 	"github.com/arturo/autohost-cloud-api/internal/domain/auth"
 	"github.com/arturo/autohost-cloud-api/internal/domain/enrollment"
+	"github.com/arturo/autohost-cloud-api/internal/domain/job"
 	"github.com/arturo/autohost-cloud-api/internal/domain/node"
+	nodecommand "github.com/arturo/autohost-cloud-api/internal/domain/node_command"
 	nodemetric "github.com/arturo/autohost-cloud-api/internal/domain/node_metric"
 	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
+	grpcserver "github.com/arturo/autohost-cloud-api/internal/grpc"
 	handlerMiddleware "github.com/arturo/autohost-cloud-api/internal/handler/middleware"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
@@ -21,53 +24,74 @@ type Config struct {
 	DB *sqlx.DB
 }
 
-// NewRouter crea y configura el router principal de la aplicación
-func NewRouter(cfg *Config) http.Handler {
+// Application bundles the HTTP handler together with the gRPC server so that
+// main.go can start both.
+type Application struct {
+	HTTP       http.Handler
+	GRPCServer *grpcserver.NodeAgentServer
+}
+
+// NewRouter builds all repositories, services, and handlers and returns the
+// Application containing both the HTTP mux and the gRPC server.
+func NewRouter(cfg *Config) *Application {
 	r := chi.NewRouter()
 
-	// Middlewares globales
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(corsMiddleware)
 
-	// Health check
 	r.Get("/health", healthCheckHandler)
 
-	// Inicializar repositorios
+	// Repositories
 	authRepo := postgres.NewAuthRepository(cfg.DB)
 	nodeRepo := postgres.NewNodeRepository(cfg.DB)
-	nodeMetricRepor := postgres.NewNodeMetricRepository(cfg.DB)
+	nodeMetricRepo := postgres.NewNodeMetricRepository(cfg.DB)
 	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
 	nodeTokenRepo := postgres.NewNodeTokenRepository(cfg.DB)
+	nodeCommandRepo := postgres.NewNodeCommandRepository(cfg.DB)
+	jobRepo := postgres.NewJobRepository(cfg.DB)
 
-	// Inicializar servicios
+	// Services
 	authService := auth.NewService(authRepo)
 	nodeService := node.NewService(nodeRepo)
-	nodeMetricService := nodemetric.NewService(nodeMetricRepor)
+	nodeMetricService := nodemetric.NewService(nodeMetricRepo)
 	enrollmentService := enrollment.NewService(enrollmentRepo)
 	nodeTokenService := nodetoken.NewService(nodeTokenRepo)
-	// Inicializar handlers
+	nodeCommandService := nodecommand.NewService(nodeCommandRepo)
+	jobService := job.NewService(jobRepo)
+
+	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
+
+	// gRPC server — also a NodeDispatcher over gRPC transport
+	grpcSrv := grpcserver.NewNodeAgentServer(nodeCommandService, jobService, nodeTokenService)
+
+	// HTTP handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
 	nodeMetricHandler := NewNodeMetricHandler(nodeMetricService)
 	enrollmentHandler := NewEnrollmentHandler(enrollmentService, nodeService, nodeTokenService)
 	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
+	wsHandler := NewWSHandler(jobService, nodeCommandService)
+	nodeCommandHandler := NewNodeCommandHandler(nodeCommandService)
 
-	// Crear middleware de autenticación de nodos
-	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
+	// MultiDispatcher: tries gRPC first, falls back to WebSocket
+	dispatcher := NewMultiDispatcher(grpcSrv, wsHandler)
+	jobHandler := NewJobHandler(jobService, dispatcher)
 
-	// API v1 routes
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())
 		r.Mount("/nodes", nodeHandler.Routes())
 		r.Mount("/node-metrics", nodeMetricHandler.Routes(nodeAuthMiddleware))
 		r.Mount("/enrollments", enrollmentHandler.Routes())
 		r.Mount("/heartbeats", heartbeatsHandler.Routes(nodeAuthMiddleware))
+		r.Mount("/node-commands", nodeCommandHandler.Routes(nodeAuthMiddleware))
+		r.Mount("/jobs", jobHandler.Routes())
+		r.Mount("/ws", wsHandler.Routes(nodeAuthMiddleware))
 	})
 
-	return r
+	return &Application{HTTP: r, GRPCServer: grpcSrv}
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -83,12 +107,10 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }

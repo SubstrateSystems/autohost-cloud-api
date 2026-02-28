@@ -1,6 +1,3 @@
-run:
-	go run ./cmd/api
-
 build:
 	go build -o bin/autohost-cloud-lite ./cmd/api
 
@@ -10,7 +7,7 @@ test:
 docker:
 	docker build -t autohost-cloud-lite .
 
-run-air:
+dev:
 	docker compose up -d
 	air -c .air.toml
 
