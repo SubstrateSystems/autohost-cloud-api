@@ -1,30 +1,33 @@
 package postgres
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // NodeCommandModel represents the node_commands table row.
 type NodeCommandModel struct {
-	ID          string    `db:"id"`
-	NodeID      string    `db:"node_id"`
-	Name        string    `db:"name"`
-	Description string    `db:"description"`
-	Type        string    `db:"type"`
-	ScriptPath  string    `db:"script_path"`
-	CreatedAt   time.Time `db:"created_at"`
+	ID          string         `db:"id"`
+	NodeID      string         `db:"node_id"`
+	Name        string         `db:"name"`
+	Description sql.NullString `db:"description"`
+	Type        string         `db:"type"`
+	ScriptPath  sql.NullString `db:"script_path"`
+	CreatedAt   time.Time      `db:"created_at"`
 }
 
 // JobModel represents the jobs table row.
 type JobModel struct {
-	ID          string     `db:"id"`
-	NodeID      string     `db:"node_id"`
-	CommandName string     `db:"command_name"`
-	CommandType string     `db:"command_type"`
-	Status      string     `db:"status"`
-	Output      string     `db:"output"`
-	Error       string     `db:"error"`
-	CreatedAt   time.Time  `db:"created_at"`
-	StartedAt   *time.Time `db:"started_at"`
-	FinishedAt  *time.Time `db:"finished_at"`
+	ID          string         `db:"id"`
+	NodeID      string         `db:"node_id"`
+	CommandName string         `db:"command_name"`
+	CommandType string         `db:"command_type"`
+	Status      string         `db:"status"`
+	Output      sql.NullString `db:"output"`
+	Error       sql.NullString `db:"error"`
+	CreatedAt   time.Time      `db:"created_at"`
+	StartedAt   *time.Time     `db:"started_at"`
+	FinishedAt  *time.Time     `db:"finished_at"`
 }
 
 // UserModel representa la estructura de la tabla users

@@ -11,9 +11,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// NodeDispatcher abstracts sending a message to a connected node over WebSocket.
+// NodeDispatcher abstracts sending an execute_job request to a connected node,
+// regardless of the underlying transport (WebSocket or gRPC).
 type NodeDispatcher interface {
-	SendToNode(nodeID string, msg interface{}) error
+	DispatchJob(nodeID, jobID, commandName string, commandType nodecommand.CommandType) error
 }
 
 // JobHandler handles job dispatch and status queries.
@@ -45,13 +46,6 @@ type dispatchJobRequest struct {
 	CommandType nodecommand.CommandType `json:"command_type"` // "default" | "custom"
 }
 
-// executeJobPayload is what we send to the node via WebSocket.
-type executeJobPayload struct {
-	JobID       string                  `json:"job_id"`
-	CommandName string                  `json:"command_name"`
-	CommandType nodecommand.CommandType `json:"command_type"`
-}
-
 // Dispatch creates a pending job and sends an execute_job message to the node.
 // POST /v1/jobs
 func (h *JobHandler) Dispatch(w http.ResponseWriter, r *http.Request) {
@@ -74,21 +68,9 @@ func (h *JobHandler) Dispatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send the job to the node via WebSocket
-	wsMsg := Message{
-		Type: "execute_job",
-	}
-	payload, _ := json.Marshal(executeJobPayload{
-		JobID:       j.ID,
-		CommandName: j.CommandName,
-		CommandType: j.CommandType,
-	})
-	wsMsg.Payload = payload
-
-	if err := h.dispatcher.SendToNode(req.NodeID, wsMsg); err != nil {
-		log.Printf("[WARN] node %s is not connected, job %s queued as pending: %v", req.NodeID, j.ID, err)
-		// Job stays pending in DB – the node will not receive it until it reconnects.
-		// Future work: implement a pending queue and push on reconnect.
+	if err := h.dispatcher.DispatchJob(req.NodeID, j.ID, j.CommandName, j.CommandType); err != nil {
+		log.Printf("[WARN] node %s not connected, job %s stays pending: %v", req.NodeID, j.ID, err)
+		// Job stays pending – future: queue and push on reconnect.
 	}
 
 	w.Header().Set("Content-Type", "application/json")

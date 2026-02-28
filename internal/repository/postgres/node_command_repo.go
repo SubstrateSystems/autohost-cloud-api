@@ -24,7 +24,7 @@ func (r *NodeCommandRepository) Upsert(cmd *nodecommand.NodeCommand) (*nodecomma
 		INSERT INTO node_commands (node_id, name, description, type, script_path)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (node_id, name) DO UPDATE
-		    SET description  = EXCLUDED.description,
+		    SET description  = COALESCE(NULLIF(EXCLUDED.description, ''), node_commands.description),
 		        type         = EXCLUDED.type,
 		        script_path  = EXCLUDED.script_path
 		RETURNING id, node_id, name, description, type, script_path, created_at`,
@@ -86,9 +86,9 @@ func modelToNodeCommand(m NodeCommandModel) *nodecommand.NodeCommand {
 		ID:          m.ID,
 		NodeID:      m.NodeID,
 		Name:        m.Name,
-		Description: m.Description,
+		Description: m.Description.String,
 		Type:        nodecommand.CommandType(m.Type),
-		ScriptPath:  m.ScriptPath,
+		ScriptPath:  m.ScriptPath.String,
 		CreatedAt:   m.CreatedAt,
 	}
 }

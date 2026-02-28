@@ -15,6 +15,7 @@ import (
 	nodecommand "github.com/arturo/autohost-cloud-api/internal/domain/node_command"
 	nodemetric "github.com/arturo/autohost-cloud-api/internal/domain/node_metric"
 	nodetoken "github.com/arturo/autohost-cloud-api/internal/domain/node_token"
+	grpcserver "github.com/arturo/autohost-cloud-api/internal/grpc"
 	handlerMiddleware "github.com/arturo/autohost-cloud-api/internal/handler/middleware"
 	"github.com/arturo/autohost-cloud-api/internal/repository/postgres"
 )
@@ -23,42 +24,50 @@ type Config struct {
 	DB *sqlx.DB
 }
 
-// NewRouter crea y configura el router principal de la aplicación
-func NewRouter(cfg *Config) http.Handler {
+// Application bundles the HTTP handler together with the gRPC server so that
+// main.go can start both.
+type Application struct {
+	HTTP       http.Handler
+	GRPCServer *grpcserver.NodeAgentServer
+}
+
+// NewRouter builds all repositories, services, and handlers and returns the
+// Application containing both the HTTP mux and the gRPC server.
+func NewRouter(cfg *Config) *Application {
 	r := chi.NewRouter()
 
-	// Middlewares globales
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(corsMiddleware)
 
-	// Health check
 	r.Get("/health", healthCheckHandler)
 
-	// Inicializar repositorios
+	// Repositories
 	authRepo := postgres.NewAuthRepository(cfg.DB)
 	nodeRepo := postgres.NewNodeRepository(cfg.DB)
-	nodeMetricRepor := postgres.NewNodeMetricRepository(cfg.DB)
+	nodeMetricRepo := postgres.NewNodeMetricRepository(cfg.DB)
 	enrollmentRepo := postgres.NewEnrollmentRepository(cfg.DB)
 	nodeTokenRepo := postgres.NewNodeTokenRepository(cfg.DB)
 	nodeCommandRepo := postgres.NewNodeCommandRepository(cfg.DB)
 	jobRepo := postgres.NewJobRepository(cfg.DB)
 
-	// Inicializar servicios
+	// Services
 	authService := auth.NewService(authRepo)
 	nodeService := node.NewService(nodeRepo)
-	nodeMetricService := nodemetric.NewService(nodeMetricRepor)
+	nodeMetricService := nodemetric.NewService(nodeMetricRepo)
 	enrollmentService := enrollment.NewService(enrollmentRepo)
 	nodeTokenService := nodetoken.NewService(nodeTokenRepo)
 	nodeCommandService := nodecommand.NewService(nodeCommandRepo)
 	jobService := job.NewService(jobRepo)
 
-	// Crear middleware de autenticación de nodos
 	nodeAuthMiddleware := handlerMiddleware.NodeAuth(nodeTokenService)
 
-	// Inicializar handlers
+	// gRPC server — also a NodeDispatcher over gRPC transport
+	grpcSrv := grpcserver.NewNodeAgentServer(nodeCommandService, jobService, nodeTokenService)
+
+	// HTTP handlers
 	authHandler := NewAuthHandler(authService, authRepo)
 	nodeHandler := NewNodeHandler(nodeService)
 	nodeMetricHandler := NewNodeMetricHandler(nodeMetricService)
@@ -66,9 +75,11 @@ func NewRouter(cfg *Config) http.Handler {
 	heartbeatsHandler := NewHeartbeatsHandler(nodeService)
 	wsHandler := NewWSHandler(jobService, nodeCommandService)
 	nodeCommandHandler := NewNodeCommandHandler(nodeCommandService)
-	jobHandler := NewJobHandler(jobService, wsHandler)
 
-	// API v1 routes
+	// MultiDispatcher: tries gRPC first, falls back to WebSocket
+	dispatcher := NewMultiDispatcher(grpcSrv, wsHandler)
+	jobHandler := NewJobHandler(jobService, dispatcher)
+
 	r.Route("/v1", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())
 		r.Mount("/nodes", nodeHandler.Routes())
@@ -80,7 +91,7 @@ func NewRouter(cfg *Config) http.Handler {
 		r.Mount("/ws", wsHandler.Routes(nodeAuthMiddleware))
 	})
 
-	return r
+	return &Application{HTTP: r, GRPCServer: grpcSrv}
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,12 +107,10 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
