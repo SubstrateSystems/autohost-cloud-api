@@ -43,8 +43,6 @@ jobs:
           path: dist
 
       - name: Deploy locally
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -e
 
@@ -62,10 +60,14 @@ jobs:
           sudo chown -R autohost:autohost "$RELEASE_DIR"
 
           sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
-          sudo chown -h autohost:autohost /opt/autohost-api/current
+
+          # 👇 cargar variables del servidor
+          set -a
+          source /opt/autohost-api/.env
+          set +a
 
           cd "$RELEASE_DIR"
-          sudo -u autohost DATABASE_URL="$DATABASE_URL" ./autohost-migrate up
+          sudo -u autohost ./autohost-migrate up
 
           sudo systemctl restart autohost-api
-          sudo systemctl status autohhost-api --no-pager -l || true
+          sudo systemctl status autohost-api --no-pager -l || true
