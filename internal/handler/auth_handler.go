@@ -115,19 +115,29 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Rotación: revoca el hash anterior y emite uno nuevo
-	userID, email, err := platform.ParseRefreshToken(body.RefreshToken)
+	oldHash := platform.HashRefreshToken(body.RefreshToken)
+
+	// Buscar el userID asociado al refresh token en BD
+	userID, err := h.repo.FindRefreshToken(oldHash)
 	if err != nil {
-		http.Error(w, "invalid refresh", http.StatusUnauthorized)
+		http.Error(w, "invalid or expired refresh token", http.StatusUnauthorized)
 		return
 	}
 
-	oldHash := platform.HashRefreshToken(body.RefreshToken)
+	// Buscar datos del usuario para incluirlos en el nuevo access token
+	user, err := h.repo.FindUserByID(userID)
+	if err != nil || user == nil {
+		http.Error(w, "user not found", http.StatusUnauthorized)
+		return
+	}
+
+	// Revocar el token viejo (rotación)
 	_ = h.repo.RevokeRefreshToken(userID, oldHash)
 
-	access, _ := platform.SignAccessToken(userID, email)
+	// Emitir nuevos tokens
+	access, _ := platform.SignAccessToken(user.ID, user.Email)
 	rt, rtHash := platform.MakeRefreshPair()
-	_ = h.repo.StoreRefreshToken(userID, rtHash, r.UserAgent(), clientIP(r))
+	_ = h.repo.StoreRefreshToken(user.ID, rtHash, r.UserAgent(), clientIP(r))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

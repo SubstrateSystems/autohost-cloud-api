@@ -70,3 +70,45 @@ func (r *AuthRepository) RevokeRefreshToken(userID, tokenHash string) error {
 		userID, tokenHash)
 	return err
 }
+
+// FindUserByID busca un usuario por ID
+func (r *AuthRepository) FindUserByID(id string) (*auth.User, error) {
+	var model UserModel
+	err := r.db.Get(&model, `
+		SELECT id, email, name, password_hash, created_at, updated_at 
+		FROM users 
+		WHERE id = $1`, id)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &auth.User{
+		ID:           model.ID,
+		Email:        model.Email,
+		Name:         model.Name,
+		PasswordHash: model.PasswordHash,
+		CreatedAt:    model.CreatedAt,
+		UpdatedAt:    model.UpdatedAt,
+	}, nil
+}
+
+// FindRefreshToken busca un refresh token activo y retorna el userID
+func (r *AuthRepository) FindRefreshToken(tokenHash string) (string, error) {
+	var userID string
+	err := r.db.QueryRowContext(context.Background(), `
+		SELECT user_id FROM refresh_tokens
+		WHERE token_hash = $1 AND revoked_at IS NULL
+	`, tokenHash).Scan(&userID)
+
+	if err == sql.ErrNoRows {
+		return "", sql.ErrNoRows
+	}
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}
