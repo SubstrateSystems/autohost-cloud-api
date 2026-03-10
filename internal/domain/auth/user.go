@@ -16,6 +16,8 @@ type User struct {
 type Repository interface {
 	CreateUser(email, name, passwordHash string) (string, error)
 	FindUserByEmail(email string) (*User, error)
+	FindUserByID(id string) (*User, error)
 	StoreRefreshToken(userID, tokenHash, userAgent, ip string) error
 	RevokeRefreshToken(userID, tokenHash string) error
+	FindRefreshToken(tokenHash string) (userID string, err error)
 }

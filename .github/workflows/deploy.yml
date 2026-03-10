@@ -49,6 +49,14 @@ jobs:
           SHA_SHORT=$(echo "$GITHUB_SHA" | cut -c1-7)
           RELEASE_DIR="/opt/autohost-api/releases/autohost-api-${SHA_SHORT}"
 
+          echo "Deploying release: $RELEASE_DIR"
+
+          # 🔥 Si el release ya existe, lo eliminamos
+          if [ -d "$RELEASE_DIR" ]; then
+            echo "Release already exists. Removing..."
+            sudo rm -rf "$RELEASE_DIR"
+          fi
+
           sudo mkdir -p "$RELEASE_DIR"
 
           sudo mv dist/autohost-api "$RELEASE_DIR/"
@@ -59,15 +67,22 @@ jobs:
           sudo chmod +x "$RELEASE_DIR/autohost-migrate"
           sudo chown -R autohost:autohost "$RELEASE_DIR"
 
+          # 🔗 Cambio atómico del symlink
           sudo ln -sfn "$RELEASE_DIR" /opt/autohost-api/current
+          sudo chown -h autohost:autohost /opt/autohost-api/current
 
-          # 👇 cargar variables del servidor
-          set -a
-          source /opt/autohost-api/.env
-          set +a
+          # 🚀 Ejecutar migraciones como usuario autohost
+          sudo -u autohost bash -c "
+            cd /opt/autohost-api/current
+            set -a
+            source /opt/autohost-api/.env
+            set +a
+            ./autohost-migrate up
+          "
 
-          cd "$RELEASE_DIR"
-          sudo -u autohost ./autohost-migrate up
-
+          # 🔄 Reiniciar servicio
+          sudo systemctl daemon-reload
           sudo systemctl restart autohost-api
+
+          # 📊 Mostrar estado (no romper pipeline si falla)
           sudo systemctl status autohost-api --no-pager -l || true
